@@ -1,0 +1,7 @@
+*.qmlc
+*.jsc
+*.log
+node_modules/
+coverage/
+.cache/
+.worktrees/

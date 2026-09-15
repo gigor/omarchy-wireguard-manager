@@ -1,0 +1,4 @@
+#!/bin/sh
+set -eu
+[ "$#" -eq 2 ] && [ "$1" = show ] && [ "$2" = interfaces ] || exit 64
+cat "${WIREGUARD_TEST_STATUS:?WIREGUARD_TEST_STATUS is required}"

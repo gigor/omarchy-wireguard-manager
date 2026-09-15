@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 1,
+  "id": "io.github.alansnchz0.wireguard-manager",
+  "name": "WireGuard Manager",
+  "version": "0.1.0",
+  "author": "Alan Sanchez",
+  "license": "MIT",
+  "description": "A compact Omarchy bar widget for observing and explicitly toggling WireGuard wg-quick connections.",
+  "kinds": ["bar-widget"],
+  "entryPoints": { "barWidget": "BarWidget.qml" },
+  "barWidget": {
+    "displayName": "WireGuard",
+    "description": "Inspect WireGuard connections and authenticate individual wg-quick actions.",
+    "category": "Network",
+    "allowMultiple": false,
+    "defaultSection": "right"
+  }
+}

@@ -1,0 +1,14 @@
+#!/bin/sh
+set -eu
+[ "$#" -eq 2 ] || exit 64
+case "$1" in up|down) ;; *) exit 64 ;; esac
+case "$2" in
+  /tmp/wgomarchy-wireguard-test/*.conf)
+    base=${2##*/}; name=${base%.conf}
+    case "$name" in *[!A-Za-z0-9_=+.-]*|'') exit 65 ;; esac
+    [ "${#name}" -le 15 ] || exit 65
+    ;;
+  *) exit 65 ;;
+esac
+printf 'wg-quick %s %s\n' "$1" "$2" >> "${WIREGUARD_TEST_LOG:?WIREGUARD_TEST_LOG is required}"
+exit "${WIREGUARD_TEST_EXIT:-0}"

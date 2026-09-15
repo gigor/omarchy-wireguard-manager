@@ -1,0 +1,4 @@
+office.conf
+home-lab.conf
+ignored.txt
+nested/evil.conf

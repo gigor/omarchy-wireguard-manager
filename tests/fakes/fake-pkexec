@@ -1,0 +1,14 @@
+#!/bin/sh
+set -eu
+[ "$#" -eq 3 ] || exit 64
+[ "$1" = /usr/bin/wg-quick ] || exit 65
+case "$3" in
+  /tmp/wgomarchy-wireguard-test/*.conf)
+    base=${3##*/}; name=${base%.conf}
+    case "$name" in *[!A-Za-z0-9_=+.-]*|'') exit 66 ;; esac
+    [ "${#name}" -le 15 ] || exit 66
+    ;;
+  *) exit 66 ;;
+esac
+printf 'pkexec %s %s %s\n' "$1" "$2" "$3" >> "${WIREGUARD_TEST_LOG:?WIREGUARD_TEST_LOG is required}"
+exit "${WIREGUARD_TEST_EXIT:-0}"
