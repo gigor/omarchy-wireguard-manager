@@ -1,8 +1,10 @@
 # Security boundary
 
 This plugin is unsandboxed QML loaded into the long-running `omarchy-shell`.
-It has no privilege of its own. Read-only discovery runs `/usr/bin/find` with
-fixed arguments and `/usr/bin/wg show interfaces` with fixed arguments.
+It has no privilege of its own. Connections come from the fixed `CONNECTIONS`
+list in `WireGuardModel.js`; the plugin never reads `/etc/wireguard/`, which
+stays root-only. The read-only status check runs `/usr/bin/wg show interfaces`
+with fixed arguments.
 
 Only an explicit row button constructs a privileged argv:
 
@@ -10,13 +12,12 @@ Only an explicit row button constructs a privileged argv:
 /usr/bin/pkexec /usr/bin/wg-quick up|down /etc/wireguard/<validated-name>.conf
 ```
 
-The name is validated immediately before command construction and is limited
-to 1–15 ASCII characters from `[A-Za-z0-9_=+.-]`. The command never uses
-`sh -c`, shell interpolation, sudo, arbitrary environment variables, or extra
-flags. Discovery uses `/usr/bin/find` without `-L`, `-maxdepth 1`, `-type f`,
-and `-name '*.conf'`, so nested files and symlinks are excluded by the
-discovery command itself. The UI reports a failed discovery separately from an
-empty directory.
+The name is checked immediately before command construction: it must be in
+`CONNECTIONS` and is limited to 1–15 ASCII characters from `[A-Za-z0-9_=+.-]`.
+The command never uses `sh -c`, shell interpolation, sudo, arbitrary
+environment variables, or extra flags. The config file is not pre-checked:
+only root can read or change `/etc/wireguard/`, and `wg-quick` reports a
+missing file as a failed operation.
 
 `pkexec` may show an authentication dialog only after a toggle click. A user
 cancel, policy denial, missing agent, missing executable, or non-zero command

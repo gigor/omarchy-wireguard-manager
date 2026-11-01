@@ -36,28 +36,13 @@ Item {
     lastAction = action
     operationState = action === "up" ? "starting" : "stopping"
     errorMessage = "Authentication required to " + action + " " + record.name + "."
-    validationProcess.command = ["/usr/bin/find", Model.configPath(record.name),
-      "-maxdepth", "0", "-type", "f", "!", "-type", "l", "-name", record.name + ".conf"]
-    validationProcess.running = true
+    // No pre-check of the config file: the user cannot read root-only
+    // /etc/wireguard, and only root can change it. wg-quick reports a missing file.
+    process.command = Model.toggleCommand(root.operationName, root.lastAction)
+    root.timedOut = false
+    operationTimeout.restart()
+    process.running = true
     return true
-  }
-
-  Process {
-    id: validationProcess
-    command: []
-    stderr: StdioCollector { id: validationError; waitForEnd: true }
-    onExited: function(exitCode) {
-      if (exitCode !== 0) {
-        var name = root.operationName
-        var action = root.lastAction
-        root.fail(name, action, "The WireGuard config is missing, unreadable, or is a symlink.")
-        return
-      }
-      process.command = Model.toggleCommand(root.operationName, root.lastAction)
-      root.timedOut = false
-      operationTimeout.restart()
-      process.running = true
-    }
   }
 
   Timer {

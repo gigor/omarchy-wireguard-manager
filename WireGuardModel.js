@@ -3,21 +3,25 @@
 var NAME_PATTERN = /^[A-Za-z0-9_=+.-]{1,15}$/
 var CONFIG_DIR = "/etc/wireguard"
 
+// The only tunnels the widget shows and toggles. A fixed list instead of a
+// directory scan, so /etc/wireguard can stay root-only (no ACL for the user).
+var CONNECTIONS = ["wg-servers"]
+
 function isValidName(name) {
     return NAME_PATTERN.test(String(name || ""))
 }
 
-function parseFindOutput(raw) {
+function connectionNames() {
     var names = []
-    var lines = String(raw || "").split(/\r?\n/)
-    for (var i = 0; i < lines.length; i++) {
-        var line = lines[i].trim()
-        if (!line || !line.endsWith(".conf")) continue
-        var name = line.substring(0, line.length - 5)
-        if (isValidName(name) && names.indexOf(name) === -1) names.push(name)
+    for (var i = 0; i < CONNECTIONS.length; i++) {
+        if (isValidName(CONNECTIONS[i]) && names.indexOf(CONNECTIONS[i]) === -1) names.push(CONNECTIONS[i])
     }
     names.sort()
     return names
+}
+
+function isAllowedName(name) {
+    return isValidName(name) && CONNECTIONS.indexOf(name) !== -1
 }
 
 function parseInterfaces(raw) {
@@ -35,16 +39,12 @@ function configPath(name) {
     return CONFIG_DIR + "/" + name + ".conf"
 }
 
-function discoveryCommand() {
-    return ["/usr/bin/find", CONFIG_DIR, "-maxdepth", "1", "-type", "f", "-name", "*.conf", "-printf", "%f\\n"]
-}
-
 function statusCommand() {
     return ["/usr/bin/wg", "show", "interfaces"]
 }
 
 function toggleCommand(name, action) {
-    if ((action !== "up" && action !== "down") || !isValidName(name)) return []
+    if ((action !== "up" && action !== "down") || !isAllowedName(name)) return []
     var path = configPath(name)
     if (!path) return []
     return ["/usr/bin/pkexec", "/usr/bin/wg-quick", action, path]

@@ -27,8 +27,8 @@ Item {
     stale = true
     activeCount = 0
     for (var i = 0; i < connections.count; i++) connections.setProperty(i, "known", false)
-    findProcess.command = Model.discoveryCommand()
-    findProcess.running = true
+    setRecords(Model.connectionNames())
+    refreshStatus()
   }
 
   function refreshStatus() {
@@ -119,26 +119,6 @@ Item {
       root.operationError = "WireGuard status did not confirm the requested action in time."
       root.pendingOperationName = ""
       root.pendingOperationAction = ""
-    }
-  }
-
-  Process {
-    id: findProcess
-    stdout: StdioCollector { id: findOutput; waitForEnd: true }
-    stderr: StdioCollector { id: findError; waitForEnd: true }
-    onExited: function(exitCode) {
-      if (exitCode !== 0) {
-        root.loading = false
-        root.stale = true
-        root.activeCount = 0
-        for (var i = 0; i < root.connections.count; i++) root.connections.setProperty(i, "known", false)
-        root.errorMessage = findError.text && findError.text.trim()
-          ? "WireGuard directory unavailable: " + findError.text.trim()
-          : "WireGuard directory unavailable."
-        return
-      }
-      root.setRecords(Model.parseFindOutput(findOutput.text))
-      root.refreshStatus()
     }
   }
 

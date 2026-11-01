@@ -29,5 +29,6 @@ been installed into user configuration and has not changed host network state.
 The Node checks cover the QML state-machine contracts statically because no
 QML linter is available: failed privileged operations return to idle, status
 confirmation is bounded, stale rows are disabled, and delegate status uses the
-outer model state. Discovery emits `%f` basenames; each validated basename
-maps immutably to `/etc/wireguard/<basename>.conf`.
+outer model state. Connection names come from the fixed `CONNECTIONS` list;
+each maps immutably to `/etc/wireguard/<name>.conf`, and toggles for names
+outside the list produce no command.
