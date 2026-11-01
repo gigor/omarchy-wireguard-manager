@@ -10,6 +10,10 @@
   per connection (icon, name, status, switch) instead of a titled list.
 - Enable the base panel's IPC handler (open/close/toggle).
 - Plain-language password prompt.
+- Dim the `WG` bar label when no connection is up, like the Tailscale icon.
+- Re-check status on interface changes (`ip -o monitor link`), so the label
+  follows tunnels toggled from the panel or a terminal. The bar now reads the
+  panel's model instead of keeping a second one.
 
 ## 0.1.0
 

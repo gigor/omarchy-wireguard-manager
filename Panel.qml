@@ -14,6 +14,8 @@ Panel {
   property bool cursorActive: false
   readonly property var barIdentity: hostWidget || root
   readonly property bool statusStale: wg.stale
+  // Shared with the bar label (BarWidget.qml) so there is one status source.
+  readonly property var connectionModel: wg
 
   // Same palette and font as the built-in Tailscale panel.
   readonly property color foreground: bar ? bar.foreground : Commons.Color.foreground

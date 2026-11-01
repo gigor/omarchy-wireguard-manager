@@ -43,6 +43,11 @@ function statusCommand() {
     return ["/usr/bin/wg", "show", "interfaces"]
 }
 
+// Prints a line on every network interface change; listening needs no root.
+function linkMonitorCommand() {
+    return ["/usr/bin/ip", "-o", "monitor", "link"]
+}
+
 function toggleCommand(name, action) {
     if ((action !== "up" && action !== "down") || !isAllowedName(name)) return []
     var path = configPath(name)

@@ -1,8 +1,11 @@
 # UI behavior
 
-The top bar shows `WG`; its tooltip counts the interfaces confirmed by
-`wg show interfaces`. Clicking opens an Omarchy `KeyboardPanel`, laid out like
-the built-in Tailscale panel. The panel refreshes on open; Escape closes it,
+The top bar shows `WG`, dimmed like the Tailscale icon unless a listed
+connection is up; its tooltip counts the interfaces confirmed by
+`wg show interfaces`. Status re-checks whenever an interface appears,
+disappears or changes (so tunnels toggled from a terminal show up too), with
+no polling. Clicking opens an Omarchy `KeyboardPanel`, laid out like the
+built-in Tailscale panel. The panel refreshes on open; Escape closes it,
 `R` refreshes it, Tab switches to the neighbouring bar panel, and arrow keys
 then Enter (or `T`) toggle the selected connection. The panel can also be
 opened over IPC: `omarchy-shell io.github.alansnchz0.wireguard-manager toggle`.

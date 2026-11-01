@@ -4,7 +4,10 @@ This plugin is unsandboxed QML loaded into the long-running `omarchy-shell`.
 It has no privilege of its own. Connections come from the fixed `CONNECTIONS`
 list in `WireGuardModel.js`; the plugin never reads `/etc/wireguard/`, which
 stays root-only. The read-only status check runs `/usr/bin/wg show interfaces`
-with fixed arguments.
+with fixed arguments. To notice tunnels going up or down, it keeps one
+`/usr/bin/ip -o monitor link` running per bar; that only listens to interface
+change events, needs no privileges, and its output is used solely as a cue to
+re-run the status check.
 
 Only an explicit row button constructs a privileged argv:
 

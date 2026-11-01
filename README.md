@@ -10,7 +10,8 @@ root-only: the plugin never reads it, and no ACL is needed. Toggles are refused
 for any name not in the list.
 
 It runs unsandboxed inside the existing `omarchy-shell` process. The status
-check is read-only: `/usr/bin/wg show interfaces` needs no authentication. A
+check is read-only: `/usr/bin/wg show interfaces` needs no authentication, and
+it re-runs whenever `/usr/bin/ip -o monitor link` reports an interface change. A
 toggle is the only privileged action and passes a fixed argv array to
 `/usr/bin/pkexec /usr/bin/wg-quick up|down /etc/wireguard/<name>.conf`.
 Connection names are restricted to `[A-Za-z0-9_=+.-]{1,15}`. No shell string

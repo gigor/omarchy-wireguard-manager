@@ -20,12 +20,15 @@ Item {
   property string pendingOperationAction: ""
   signal refreshed()
 
+  Component.onCompleted: refresh()
+
+  // activeCount keeps its last confirmed value while a refresh runs, so the
+  // bar label does not flicker; a failed status check zeroes it.
   function refresh() {
     if (loading) return
     loading = true
     errorMessage = ""
     stale = true
-    activeCount = 0
     for (var i = 0; i < connections.count; i++) connections.setProperty(i, "known", false)
     setRecords(Model.connectionNames())
     refreshStatus()
@@ -139,5 +142,30 @@ Item {
       }
       root.applyStatus(statusOutput.text)
     }
+  }
+
+  // Bringing a tunnel up or down creates or deletes its interface, so a link
+  // change is the cue to re-check status. This catches tunnels toggled from a terminal too, without
+  // polling. A burst of events (add, mtu, up) settles into one refresh.
+  Process {
+    id: linkMonitor
+    command: Model.linkMonitorCommand()
+    running: true
+    stdout: SplitParser { onRead: linkSettle.restart() }
+    onExited: monitorRestart.start()
+  }
+
+  Timer {
+    id: linkSettle
+    interval: 300
+    repeat: false
+    onTriggered: root.loading ? restart() : root.refresh()
+  }
+
+  Timer {
+    id: monitorRestart
+    interval: 5000
+    repeat: false
+    onTriggered: linkMonitor.running = true
   }
 }
