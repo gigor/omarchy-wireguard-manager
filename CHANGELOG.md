@@ -6,6 +6,10 @@
   (`wg-servers`), so the directory stays root-only and needs no ACL.
 - Refuse toggles for names outside the list.
 - Drop the pre-toggle `find` check on the config file, which needed the ACL.
+- Restyle the panel after the built-in Tailscale panel: a `PanelHero` header
+  per connection (icon, name, status, switch) instead of a titled list.
+- Enable the base panel's IPC handler (open/close/toggle).
+- Plain-language password prompt.
 
 ## 0.1.0
 

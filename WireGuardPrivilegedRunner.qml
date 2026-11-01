@@ -35,7 +35,7 @@ Item {
     operationName = record.name
     lastAction = action
     operationState = action === "up" ? "starting" : "stopping"
-    errorMessage = "Authentication required to " + action + " " + record.name + "."
+    errorMessage = "Enter your password to turn " + (action === "up" ? "on " : "off ") + record.name + "."
     // No pre-check of the config file: the user cannot read root-only
     // /etc/wireguard, and only root can change it. wg-quick reports a missing file.
     process.command = Model.toggleCommand(root.operationName, root.lastAction)

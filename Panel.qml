@@ -1,45 +1,62 @@
 import QtQuick
-import QtQuick.Layouts
 import Quickshell
 import qs.Commons
+import qs.Commons as Commons
 import qs.Ui
-import "WireGuardModel.js" as Model
 
 Panel {
   id: root
   moduleName: "io.github.alansnchz0.wireguard-manager"
   ipcTarget: "io.github.alansnchz0.wireguard-manager"
-  manageIpc: false
   property var anchorItem: null
   property var hostWidget: null
+  property int cursorIndex: 0
+  property bool cursorActive: false
   readonly property var barIdentity: hostWidget || root
-  readonly property bool statusStale: model.stale
+  readonly property bool statusStale: wg.stale
 
-  function open() { controller.show(); model.refresh() }
-  function close() { controller.hide() }
-  function toggle() { opened ? close() : open() }
-  function closeForPopoutSwitch() { close() }
+  // Same palette and font as the built-in Tailscale panel.
+  readonly property color foreground: bar ? bar.foreground : Commons.Color.foreground
+  readonly property color urgent: bar ? bar.urgent : Commons.Color.urgent
+  readonly property color dim: Qt.darker(foreground, 1.55)
+  readonly property string fontFamily: bar ? bar.fontFamily : Style.font.family
+
+  // One line under the header: the password prompt while an action runs,
+  // otherwise the last failure.
+  readonly property bool operationRunning: runner.operationState !== "idle"
+  readonly property string statusLine: operationRunning ? runner.errorMessage : (wg.operationError || wg.errorMessage)
+
   function toggleRecord(index) {
-    var record = model.connections.get(index)
+    var record = wg.connections.get(index)
     if (!record || !record.known ||
         root.statusStale ||
         (record.operationState !== "idle" && record.operationState !== "error")) return
     var action = record.active ? "down" : "up"
-    model.markOperation(record.name, action === "up" ? "starting" : "stopping")
+    wg.markOperation(record.name, action === "up" ? "starting" : "stopping")
     runner.toggle(record, action)
   }
 
-  WireGuardModel { id: model }
+  function setCursor(index) {
+    cursorActive = true
+    cursorIndex = index
+  }
+
+  onOpenedChanged: if (opened) {
+    cursorActive = false
+    wg.refresh()
+  }
+
+  WireGuardModel { id: wg }
   WireGuardPrivilegedRunner {
     id: runner
     onFinished: function(name, action, success, errorMessage) {
       if (!success) {
-        model.operationError = errorMessage
-        model.markOperation(name, "error")
+        wg.operationError = errorMessage
+        wg.markOperation(name, "error")
       } else {
-        model.markOperation(name, action === "up" ? "starting" : "stopping")
+        wg.markOperation(name, action === "up" ? "starting" : "stopping")
       }
-      model.refresh()
+      wg.refresh()
     }
   }
 
@@ -50,134 +67,123 @@ Panel {
     bar: root.bar
     open: root.opened
     focusTarget: keyCatcher
-    contentWidth: popup.fittedContentWidth(Style.space(360))
+    contentWidth: popup.fittedContentWidth(Style.space(380))
     contentHeight: popup.fittedContentHeight(column.implicitHeight, Style.space(560))
 
     PanelKeyCatcher {
       id: keyCatcher
       anchors.fill: parent
       onCloseRequested: root.close()
-      onTextKey: function(text) { if (text === "r" || text === "R") model.refresh() }
-      onMoveRequested: function(dx, dy) {
-        if (dy !== 0) connectionList.currentIndex = Math.max(0, Math.min(model.connections.count - 1, connectionList.currentIndex + dy))
+      onTabRequested: function(direction) { root.switchPanel(direction) }
+      onTextKey: function(text) {
+        if (text === "r" || text === "R") wg.refresh()
+        else if (text === "t" || text === "T") root.toggleRecord(root.cursorIndex)
       }
-      onActivateRequested: if (connectionList.currentIndex >= 0) root.toggleRecord(connectionList.currentIndex)
+      onMoveRequested: function(dx, dy) {
+        if (!root.cursorActive) { root.cursorActive = true; return }
+        if (dy !== 0) root.cursorIndex = Math.max(0, Math.min(wg.connections.count - 1, root.cursorIndex + dy))
+      }
+      onActivateRequested: if (root.cursorActive) root.toggleRecord(root.cursorIndex)
 
-      ColumnLayout {
+      Column {
         id: column
-        anchors.fill: parent
-        anchors.margins: Style.space(16)
-        spacing: Style.space(10)
+        width: parent.width
+        spacing: Style.space(12)
 
-        Text {
-          text: "WIREGUARD"
-          color: root.barForeground
-          font.family: Style.font.family
-          font.pixelSize: Style.font.title
-          font.bold: true
-        }
-        Text {
-          Layout.fillWidth: true
-          text: model.loading ? "Refreshing…" : (model.errorMessage || (model.stale ? "Status is stale" : "Ready"))
-          color: model.errorMessage || model.stale ? Color.urgent : root.barForeground
-          elide: Text.ElideRight
-        }
-        PanelSeparator {
-          foreground: root.barForeground
-        }
-        Text {
-          visible: runner.operationState !== "idle" || model.operationError !== ""
-          Layout.fillWidth: true
-          text: runner.operationState !== "idle" ? runner.errorMessage : model.operationError
-          color: Color.urgent
-          wrapMode: Text.Wrap
-        }
-        PanelSeparator {
-          visible: runner.operationState !== "idle" || model.operationError !== ""
-          foreground: root.barForeground
-        }
-        ListView {
-          id: connectionList
-          Layout.fillWidth: true
-          Layout.fillHeight: true
-          // ListView does not provide an implicit height for ColumnLayout.
-          // Keep enough room for an empty-state message and the discovered
-          // rows, while still preventing a large config directory from
-          // pushing the popup beyond its fitted height.
-          readonly property int rowHeight: Style.space(56)
-          implicitHeight: Math.min(Math.max(contentHeight, Style.space(40)), Style.space(240))
-          Layout.preferredHeight: implicitHeight
-          Layout.minimumHeight: Style.space(40)
-          height: implicitHeight
-          spacing: Style.space(6)
-          clip: true
-          boundsBehavior: Flickable.StopAtBounds
-          interactive: contentHeight > height
-          model: model.connections
-          currentIndex: count > 0 ? 0 : -1
-          delegate: CursorSurface {
+        Repeater {
+          model: wg.connections
+
+          Column {
+            id: entry
             required property int index
             required property string name
             required property bool active
             required property bool known
             required property string operationState
-            width: connectionList.width
-            height: connectionList.rowHeight
-            implicitHeight: connectionList.rowHeight
-            hasCursor: ListView.isCurrentItem
-            current: ListView.isCurrentItem
-            foreground: root.barForeground
-            accent: Color.accent
 
-            RowLayout {
-              id: rowContent
-              anchors.fill: parent
-              anchors.margins: Style.space(10)
-              spacing: Style.space(8)
+            // The hero's icon and switch are built inside PanelHero, so they
+            // reach panel state through these rather than through `root`.
+            readonly property bool operating: operationState === "starting" || operationState === "stopping"
+            readonly property bool statusUnknown: (!known || root.statusStale) && !wg.loading
+            readonly property bool switchEnabled: known && !root.statusStale &&
+              (operationState === "idle" || operationState === "error") &&
+              !root.operationRunning
+            readonly property bool switchBusy: operating || root.operationRunning
+            readonly property bool hasCursor: root.cursorActive && root.cursorIndex === index
+            readonly property color iconColor: active ? root.foreground : root.dim
+            function toggle() { root.toggleRecord(index) }
+            function focusRow() { root.setCursor(index) }
 
-              ColumnLayout {
-                Layout.fillWidth: true
-                spacing: Style.space(2)
+            width: column.width
+            spacing: Style.space(12)
 
+            PanelSeparator {
+              visible: entry.index > 0
+              foreground: root.foreground
+            }
+
+            PanelHero {
+              id: hero
+              width: parent.width
+              title: entry.name
+              meta: entry.operationState === "starting" ? "Connecting"
+                : entry.operationState === "stopping" ? "Disconnecting"
+                : entry.operationState === "error" ? "Failed"
+                : entry.statusUnknown ? "Status unknown"
+                : entry.active ? "Connected" : "Disconnected"
+              foreground: root.foreground
+              fontFamily: root.fontFamily
+              iconOpacity: entry.active ? 1.0 : 0.5
+              iconComponent: Component {
                 Text {
-                  Layout.fillWidth: true
-                  text: name
-                  color: root.barForeground
-                  font.family: Style.font.family
-                  elide: Text.ElideRight
-                }
-                Text {
-                  Layout.fillWidth: true
-                  text: operationState === "starting" ? "Starting" : operationState === "stopping" ? "Stopping" : operationState === "error" ? "Failed" : (!known || root.statusStale) ? "Unknown" : active ? "Active" : "Inactive"
-                  color: operationState === "error" || !known || root.statusStale ? Color.urgent : root.barForeground
-                  opacity: 0.8
-                  font.family: Style.font.family
-                  font.pixelSize: Style.font.bodySmall
-                  elide: Text.ElideRight
+                  text: "󰦝"
+                  color: entry.iconColor
+                  font.family: hero.fontFamily
+                  font.pixelSize: Style.font.display
                 }
               }
+              trailingControl: Component {
+                ToggleSwitch {
+                  id: powerSwitch
+                  checked: entry.active
+                  busy: entry.switchBusy
+                  interactive: entry.switchEnabled
+                  hasCursor: entry.hasCursor
+                  foreground: hero.foreground
+                  onHovered: function(on) { if (on) entry.focusRow() }
+                  onToggled: entry.toggle()
+                  Accessible.name: (entry.active ? "Disable " : "Enable ") + entry.name
 
-              ToggleSwitch {
-                id: connectionToggle
-                checked: active
-                busy: operationState === "starting" || operationState === "stopping" || runner.operationState !== "idle"
-                interactive: known && !root.statusStale &&
-                  (operationState === "idle" || operationState === "error") &&
-                  runner.operationState === "idle"
-                hasCursor: ListView.isCurrentItem
-                foreground: root.barForeground
-                accent: Color.accent
-                onToggled: root.toggleRecord(index)
-                Accessible.name: (active ? "Disable " : "Enable ") + name
+                  PanelToolTip {
+                    visible: powerSwitch.containsMouse
+                    text: (entry.active ? "Turn off " : "Turn on ") + entry.name
+                    fontFamily: hero.fontFamily
+                  }
+                }
               }
             }
           }
-          footer: Text {
-            width: connectionList.width
-            visible: connectionList.count === 0 && !model.loading && !model.errorMessage
-            text: "No WireGuard .conf files found."
-            color: root.barForeground
-          }
+        }
+
+        Text {
+          textFormat: Text.PlainText
+          visible: root.statusLine !== ""
+          width: parent.width
+          text: root.statusLine
+          color: root.operationRunning ? root.dim : root.urgent
+          font.family: root.fontFamily
+          font.pixelSize: Style.font.bodySmall
+          wrapMode: Text.WordWrap
+        }
+
+        Text {
+          textFormat: Text.PlainText
+          visible: wg.connections.count === 0
+          width: parent.width
+          text: "No WireGuard connections configured."
+          color: root.dim
+          font.family: root.fontFamily
+          font.pixelSize: Style.font.body
         }
       }
     }

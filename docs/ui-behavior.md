@@ -1,16 +1,18 @@
 # UI behavior
 
-The top bar shows `WG N`, where `N` is the number of interfaces confirmed by
-`wg show interfaces`. Clicking opens an Omarchy `KeyboardPanel`. The panel
-refreshes on open and every five seconds while open; Escape closes it and `R`
-refreshes it. Closing stops polling.
+The top bar shows `WG`; its tooltip counts the interfaces confirmed by
+`wg show interfaces`. Clicking opens an Omarchy `KeyboardPanel`, laid out like
+the built-in Tailscale panel. The panel refreshes on open; Escape closes it,
+`R` refreshes it, Tab switches to the neighbouring bar panel, and arrow keys
+then Enter (or `T`) toggle the selected connection. The panel can also be
+opened over IPC: `omarchy-shell io.github.alansnchz0.wireguard-manager toggle`.
 
-Rows are the names in `CONNECTIONS`, sorted. Each name is mapped to the fixed
-path `/etc/wireguard/<name>.conf`; no alternate config directory is accepted.
-Each row shows Active, Inactive,
-Unknown, Starting, Stopping, or Failed. Unknown rows cannot be toggled. The
-Failed state remains visible through the refresh following an unsuccessful or
-unconfirmed action; once refreshed status is known, the row can be retried. The
-authentication hint appears only after a toggle is initiated. Missing-tool,
-stale-status, and operation-failure states are shown as text rather than
-treated as inactive.
+Each name in `CONNECTIONS` gets a header (`PanelHero`): an icon, the name as
+the title, a status line, and an on/off switch. Each name is mapped to the
+fixed path `/etc/wireguard/<name>.conf`; no alternate config directory is
+accepted. The status line reads Connected, Disconnected, Connecting,
+Disconnecting, Failed, or Status unknown. Unknown connections cannot be
+toggled. The Failed state remains visible through the refresh following an
+unsuccessful or unconfirmed action; once refreshed status is known, the switch
+can be retried. A line under the header shows the password prompt while an
+action runs, otherwise the last failure (status unavailable, action failed).
